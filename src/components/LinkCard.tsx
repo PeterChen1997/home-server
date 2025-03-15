@@ -1,11 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ExternalLink, Lock, WifiOff } from "lucide-react";
-import { cn, isInternalUrl, isInLocalNetwork } from "@/lib/utils";
+import {
+  cn,
+  isInternalUrl,
+  isInLocalNetwork,
+  isUrlAccessibleInLocalNetwork,
+} from "@/lib/utils";
 import type { LinkWithRelations } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface LinkCardProps {
   link: LinkWithRelations;
@@ -18,137 +32,110 @@ export function LinkCard({
   showCategory = true,
   iconBase64,
 }: LinkCardProps) {
-  const isInternal = isInternalUrl(link.url);
-  const [iconSrc, setIconSrc] = useState<string>(
-    iconBase64 || "/placeholder-icon.svg"
-  );
-  const [isInLocalNet, setIsInLocalNet] = useState<boolean | null>(null);
-  const [isLoadingNetwork, setIsLoadingNetwork] = useState(true);
+  const [isAccessible, setIsAccessible] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 当组件挂载后，检测是否在局域网内
+  // 检查内网链接可访问性
   useEffect(() => {
-    const checkNetwork = async () => {
-      try {
-        const inLocal = await isInLocalNetwork();
-        setIsInLocalNet(inLocal);
-      } catch (error) {
-        console.error("Network detection error:", error);
-        setIsInLocalNet(false);
-      } finally {
-        setIsLoadingNetwork(false);
-      }
-    };
+    // 如果链接是内部链接，检查可访问性
+    if (link.isInternalOnly) {
+      setIsLoading(true);
+      isUrlAccessibleInLocalNetwork(link.url)
+        .then((result) => {
+          setIsAccessible(result);
+        })
+        .catch(() => {
+          setIsAccessible(false);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      // 非内网链接总是可访问
+      setIsAccessible(true);
+    }
+  }, [link.url, link.isInternalOnly]);
 
-    checkNetwork();
-  }, []);
-
-  // 图片加载错误的处理器
-  const handleImageError = () => {
-    setIconSrc("/placeholder-icon.svg");
-  };
-
-  // 判断内网链接是否可访问
-  const isInaccessible =
-    isInternal && isInLocalNet === false && link.isInternalOnly;
+  // 计算链接状态
+  const isDisabled = link.isInternalOnly && isAccessible === false;
+  const ariaDisabled = isDisabled ? { "aria-disabled": true } : {};
 
   return (
-    <Link
-      href={isInaccessible ? "#" : link.url}
-      target={isInaccessible ? "_self" : "_blank"}
-      rel="noopener noreferrer"
-      onClick={(e) => isInaccessible && e.preventDefault()}
+    <Card
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-lg border bg-card p-4 text-card-foreground transition-all hover:shadow-md",
-        link.isInternalOnly &&
-          !isInaccessible &&
-          "border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/10",
-        isInaccessible &&
-          "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50 opacity-60 cursor-not-allowed"
+        "group transition-all duration-300 hover:shadow-md dark:hover:shadow-primary/10",
+        isDisabled
+          ? "opacity-60 cursor-not-allowed bg-muted"
+          : "hover:border-primary/50 cursor-pointer"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <div className="relative h-10 w-10 overflow-hidden rounded-md border bg-background">
-            <Image
-              src={iconSrc}
-              alt={link.title}
-              width={40}
-              height={40}
-              className="object-contain p-1"
-              onError={handleImageError}
-            />
-          </div>
-          <div>
-            <h3
-              className={cn(
-                "font-medium group-hover:underline",
-                isInaccessible && "group-hover:no-underline"
-              )}
-            >
-              {link.title}
-            </h3>
-            {showCategory && link.category && (
-              <p className="text-xs text-muted-foreground">
-                {link.category.name}
-              </p>
+      <Link
+        href={isDisabled ? "#" : link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn("block h-full", isDisabled && "pointer-events-none")}
+        {...ariaDisabled}
+      >
+        <CardHeader className="flex flex-row items-center space-x-4 p-4">
+          <div className="h-10 w-10 overflow-hidden rounded-full bg-background flex items-center justify-center border">
+            {iconBase64 ? (
+              <Image
+                src={iconBase64}
+                alt={`${link.title} icon`}
+                width={32}
+                height={32}
+                className="object-contain"
+              />
+            ) : (
+              <div className="h-6 w-6 bg-primary/10 rounded-full" />
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-1">
+          <div className="flex-1 space-y-1">
+            <CardTitle className="text-base font-medium leading-tight line-clamp-1">
+              {link.title}
+            </CardTitle>
+            {link.description && (
+              <CardDescription className="text-xs line-clamp-1">
+                {link.description}
+              </CardDescription>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0 px-4 pb-0">
+          <div className="text-xs text-muted-foreground truncate mb-3">
+            {link.url}
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex flex-wrap gap-1.5 p-4 pt-1">
+          {/* 分类标签 */}
+          {showCategory && link.category && (
+            <Badge variant="outline" className="bg-primary/5 text-xs">
+              {link.category.name}
+            </Badge>
+          )}
+
+          {/* 标签列表 */}
+          {link.tags &&
+            link.tags.length > 0 &&
+            link.tags.map((tag) => (
+              <Badge key={tag.id} variant="secondary" className="text-xs">
+                {tag.name}
+              </Badge>
+            ))}
+
+          {/* 内网标签 */}
           {link.isInternalOnly && (
-            <span
-              className={cn(
-                "flex h-6 items-center rounded-full px-2 text-xs font-medium",
-                isInaccessible
-                  ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                  : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-              )}
+            <Badge
+              variant={isAccessible ? "default" : "destructive"}
+              className="text-xs ml-auto"
             >
-              <Lock className="mr-1 h-3 w-3" />
-              内网
-            </span>
+              {isLoading ? "检测中..." : isAccessible ? "可访问" : "不可访问"}
+            </Badge>
           )}
-          {isInaccessible && (
-            <span className="flex h-6 items-center rounded-full bg-red-100 px-2 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-300">
-              <WifiOff className="mr-1 h-3 w-3" />
-              不可用
-            </span>
-          )}
-          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-        </div>
-      </div>
-
-      {link.description && (
-        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-          {link.description}
-        </p>
-      )}
-
-      {link.tags.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1">
-          {link.tags.map((tag) => (
-            <span
-              key={tag.id}
-              className={cn(
-                "inline-flex h-5 items-center rounded-full px-2 text-xs font-medium",
-                isInaccessible
-                  ? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                  : ""
-              )}
-              style={
-                !isInaccessible && tag.color
-                  ? {
-                      backgroundColor: `${tag.color}20`,
-                      color: tag.color,
-                    }
-                  : undefined
-              }
-            >
-              {tag.name}
-            </span>
-          ))}
-        </div>
-      )}
-    </Link>
+        </CardFooter>
+      </Link>
+    </Card>
   );
 }

@@ -100,39 +100,106 @@ export function isInternalUrl(url: string): boolean {
 }
 
 /**
- * 检查当前环境是否在局域网内
- * 通过检测网络接口来判断是否在内网环境
+ * 检查目标URL是否在当前局域网可访问
+ * 分别尝试不同的方法检测可达性
  */
-export async function isInLocalNetwork(): Promise<boolean> {
-  // 在客户端组件中检测是否为局域网
-  // 基于网络连接状态和Private IP检测
-  if (typeof navigator !== "undefined" && "connection" in navigator) {
-    const connection = (navigator as any).connection;
-
-    // 如果使用了VPN、以太网或WiFi连接可能在内网
-    if (
-      connection &&
-      (connection.type === "ethernet" ||
-        connection.type === "wifi" ||
-        connection.effectiveType === "4g")
-    ) {
-      // 尝试通过简单的ping测试检查是否能访问内网资源
-      try {
-        // 创建一个1px的透明图片请求，用于检测内网连接
-        // 这个地址应该是您内网的一个服务地址
-        const testUrl = "/api/network-test";
-        const response = await fetch(testUrl, {
-          method: "HEAD",
-          cache: "no-store",
-          headers: { "Cache-Control": "no-cache" },
-        });
-        return response.ok;
-      } catch (error) {
-        return false;
-      }
-    }
+export async function isUrlAccessibleInLocalNetwork(
+  url: string
+): Promise<boolean> {
+  // 如果不是内部URL，则总是可访问
+  if (!isInternalUrl(url)) {
+    return true;
   }
 
-  // 默认情况下假设不在局域网内
-  return false;
+  try {
+    // 1. 尝试通过API检测客户端网络环境
+    const networkEnvResponse = await fetch("/api/network-test", {
+      method: "GET",
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
+
+    if (!networkEnvResponse.ok) {
+      return false;
+    }
+
+    const networkData = await networkEnvResponse.json();
+
+    // 2. 提取客户端IP和网络信息
+    const clientIp = networkData.clientIp || "";
+    const networkInfo = networkData.networkInfo || {};
+
+    // 解析目标URL的主机名
+    const targetHost = new URL(url).hostname;
+
+    // 3. 检查客户端IP和目标主机是否在同一子网
+    if (clientIp.startsWith("192.168.") && targetHost.startsWith("192.168.")) {
+      // 提取子网部分 (192.168.X)
+      const clientSubnet = clientIp.split(".").slice(0, 3).join(".");
+      const targetSubnet = targetHost.split(".").slice(0, 3).join(".");
+
+      if (clientSubnet === targetSubnet) {
+        return true;
+      }
+    }
+
+    // 4. 对于特定的内网域名后缀，如果客户端有本地网络连接，假设可访问
+    if (
+      (targetHost.endsWith(".local") || targetHost.endsWith(".lan")) &&
+      (networkInfo.hasWifi || networkInfo.hasEthernet)
+    ) {
+      return true;
+    }
+
+    // 5. 尝试通过服务端代理进行ping测试（仅适用于同一子网的服务端）
+    try {
+      const probeResponse = await fetch(
+        `/api/network-probe?target=${encodeURIComponent(targetHost)}`,
+        {
+          method: "HEAD",
+          cache: "no-store",
+          signal: AbortSignal.timeout(2000), // 2秒超时
+        }
+      );
+
+      return probeResponse.ok;
+    } catch (error) {
+      // ping测试失败
+    }
+
+    // 默认情况下，假设不可访问
+    return false;
+  } catch (error) {
+    console.error("Error checking network accessibility:", error);
+    return false;
+  }
+}
+
+/**
+ * 检查当前客户端是否在局域网环境
+ */
+export async function isInLocalNetwork(): Promise<boolean> {
+  if (typeof window === "undefined") {
+    return false; // 服务端渲染时默认为false
+  }
+
+  try {
+    // 检测客户端网络环境
+    const response = await fetch("/api/network-test", {
+      method: "HEAD",
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    // 在实际部署环境中，可以从响应中获取更多网络信息
+    // 这里简单地根据响应判断客户端处于局域网环境
+    return true;
+  } catch (error) {
+    console.error("Network detection error:", error);
+    return false;
+  }
 }

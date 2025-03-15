@@ -5,9 +5,6 @@
   "outputDirectory": ".next",
   "regions": ["sin1"],
   "env": {
-    "NEXTAUTH_URL": {
-      "development": "http://localhost:3000",
-      "production": "https://your-domain.vercel.app"
-    }
+    "NEXTAUTH_URL": "https://l.linkp.fun"
   }
 }
