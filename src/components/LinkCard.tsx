@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -11,6 +11,10 @@ import {
   CheckCheck,
   Share2,
   ArrowUpRightFromSquare,
+  Globe,
+  FileText,
+  Briefcase,
+  Server,
 } from "lucide-react";
 import {
   cn,
@@ -53,6 +57,7 @@ export function LinkCard({
   const [showDetails, setShowDetails] = useState(false);
   const [effectiveUrl, setEffectiveUrl] = useState<string>(link.url);
   const [isInLocalNet, setIsInLocalNet] = useState(false);
+  const [iconError, setIconError] = useState(false);
 
   // 复制链接到剪贴板
   const copyToClipboard = () => {
@@ -126,6 +131,32 @@ export function LinkCard({
     }
   }, [effectiveUrl, link.isInternalOnly]);
 
+  // 根据链接类型获取默认图标
+  const defaultIcon = useMemo(() => {
+    if (iconError || !iconBase64) {
+      if (isInternalUrl(link.url) || link.isInternalOnly) {
+        return <Server className="h-5 w-5 text-primary/70" />;
+      } else if (link.url.includes("github.com")) {
+        return (
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.207 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.807 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12" />
+          </svg>
+        );
+      } else if (link.url.includes("google.com")) {
+        return (
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+            <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
+          </svg>
+        );
+      } else if (link.url.includes("docs") || link.url.includes("document")) {
+        return <FileText className="h-5 w-5 text-blue-500" />;
+      } else {
+        return <Globe className="h-5 w-5 text-primary/70" />;
+      }
+    }
+    return null;
+  }, [iconBase64, link.url, link.isInternalOnly, iconError]);
+
   // 计算链接状态
   const isDisabled = link.isInternalOnly && isAccessible === false;
   const ariaDisabled = isDisabled ? { "aria-disabled": true } : {};
@@ -133,7 +164,7 @@ export function LinkCard({
   return (
     <Card
       className={cn(
-        "group transition-all duration-300 hover:shadow-md dark:hover:shadow-primary/10",
+        "group transition-all duration-300 hover:shadow-md dark:hover:shadow-primary/10 relative",
         isDisabled
           ? "opacity-60 cursor-not-allowed bg-muted"
           : "hover:border-primary/50 cursor-pointer"
@@ -141,21 +172,34 @@ export function LinkCard({
     >
       <div className="flex flex-col h-full">
         <CardHeader className="flex flex-row items-center space-x-4 p-4">
-          <div className="h-10 w-10 overflow-hidden rounded-full bg-background flex items-center justify-center border">
-            {iconBase64 ? (
-              <Image
-                src={iconBase64}
-                alt={`${link.title} icon`}
-                width={32}
-                height={32}
-                className="object-contain"
-              />
+          <div className="flex-shrink-0 w-10 h-10 overflow-hidden rounded-md bg-background flex items-center justify-center border shadow-sm">
+            {iconBase64 && !iconError ? (
+              <div className="flex items-center justify-center w-full h-full">
+                <Image
+                  src={iconBase64}
+                  alt={`${link.title} icon`}
+                  width={24}
+                  height={24}
+                  className="object-contain max-w-[24px] max-h-[24px]"
+                  onError={() => {
+                    setIconError(true);
+                  }}
+                />
+              </div>
             ) : (
-              <div className="h-6 w-6 bg-primary/10 rounded-full" />
+              <div className="flex items-center justify-center w-full h-full">
+                {defaultIcon || (
+                  <div className="h-6 w-6 flex items-center justify-center bg-primary/5 rounded">
+                    <span className="text-sm font-semibold text-primary">
+                      {link.title.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div className="flex-1 space-y-1">
-            <CardTitle className="flex items-center justify-between text-base font-medium leading-tight line-clamp-1">
+            <CardTitle className="flex items-center justify-between text-base font-medium leading-tight line-clamp-1 flex">
               <span>{link.title}</span>
 
               <div className="flex items-center gap-1 ml-2">

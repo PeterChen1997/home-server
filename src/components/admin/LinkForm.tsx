@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { isInternalUrl } from "@/lib/utils";
 import type {
@@ -24,6 +24,7 @@ export function LinkForm({
 }: LinkFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const userManuallySetInternalFlag = useRef(false);
   const [formData, setFormData] = useState({
     title: "",
     url: "",
@@ -50,13 +51,15 @@ export function LinkForm({
         categoryId: link.categoryId || "",
         tagIds: link.tags.map((tag) => tag.id),
       });
-    } else if (!isEditing) {
-      // 新建链接时，如果URL是内网地址，自动设置isInternalOnly为true
-      if (formData.url && isInternalUrl(formData.url)) {
-        setFormData((prev) => ({ ...prev, isInternalOnly: true }));
-      }
     }
-  }, [isEditing, link, formData.url]);
+  }, [isEditing, link]);
+
+  // 仅当创建新链接时，监听URL变化自动设置内网标志
+  useEffect(() => {
+    if (!isEditing && formData.url && isInternalUrl(formData.url)) {
+      setFormData((prev) => ({ ...prev, isInternalOnly: true }));
+    }
+  }, [formData.url, isEditing]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -68,12 +71,17 @@ export function LinkForm({
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData((prev) => ({ ...prev, [name]: checked }));
+
+      // 如果用户手动更改了isInternalOnly，记录下来
+      if (name === "isInternalOnly") {
+        userManuallySetInternalFlag.current = true;
+      }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
 
-    // 如果修改了URL，检查是否是内网地址
-    if (name === "url" && value) {
+    // 仅当URL改变且用户没有手动操作过isInternalOnly复选框时，才自动设置
+    if (name === "url" && value && !userManuallySetInternalFlag.current) {
       const isInternal = isInternalUrl(value);
       setFormData((prev) => ({ ...prev, isInternalOnly: isInternal }));
     }
@@ -260,32 +268,87 @@ export function LinkForm({
           <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             标签
           </label>
-          <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-3">
-            {tags.map((tag) => (
-              <label
-                key={tag.id}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                style={{
-                  backgroundColor: formData.tagIds.includes(tag.id)
-                    ? tag.color
-                      ? `${tag.color}30`
-                      : "#e5e7eb"
-                    : "transparent",
-                  color: tag.color || "#4b5563",
-                  border: `1px solid ${tag.color || "#d1d5db"}`,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={formData.tagIds.includes(tag.id)}
-                  onChange={() => handleTagChange(tag.id)}
-                />
-                {tag.name}
-              </label>
-            ))}
-            {tags.length === 0 && (
+          <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-3 max-h-40 overflow-y-auto">
+            {tags.length === 0 ? (
               <span className="text-sm text-muted-foreground">暂无标签</span>
+            ) : (
+              <>
+                <div className="w-full mb-2">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    常用标签:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {tags
+                      .filter((tag) =>
+                        ["工作", "学习", "娱乐", "内网", "公网"].includes(
+                          tag.name
+                        )
+                      )
+                      .map((tag) => (
+                        <label
+                          key={tag.id}
+                          className="flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          style={{
+                            backgroundColor: formData.tagIds.includes(tag.id)
+                              ? tag.color
+                                ? `${tag.color}30`
+                                : "#e5e7eb"
+                              : "transparent",
+                            color: tag.color || "#4b5563",
+                            border: `1px solid ${tag.color || "#d1d5db"}`,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={formData.tagIds.includes(tag.id)}
+                            onChange={() => handleTagChange(tag.id)}
+                          />
+                          {tag.name}
+                        </label>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="w-full">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    所有标签:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {tags
+                      .filter(
+                        (tag) =>
+                          !["工作", "学习", "娱乐", "内网", "公网"].includes(
+                            tag.name
+                          )
+                      )
+                      .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"))
+                      .map((tag) => (
+                        <label
+                          key={tag.id}
+                          className="flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          style={{
+                            backgroundColor: formData.tagIds.includes(tag.id)
+                              ? tag.color
+                                ? `${tag.color}30`
+                                : "#e5e7eb"
+                              : "transparent",
+                            color: tag.color || "#4b5563",
+                            border: `1px solid ${tag.color || "#d1d5db"}`,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={formData.tagIds.includes(tag.id)}
+                            onChange={() => handleTagChange(tag.id)}
+                          />
+                          {tag.name}
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
