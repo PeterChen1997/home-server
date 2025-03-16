@@ -184,22 +184,44 @@ export function LinkCard({
     iconError,
   ]);
 
-  // 计算链接状态
-  const isDisabled = link.isInternalOnly && isAccessible === false;
-  const ariaDisabled = isDisabled ? { "aria-disabled": true } : {};
+  // 计算链接状态 - 只用于显示警告，不再禁用链接
+  const shouldShowWarning =
+    link.isInternalOnly && (isAccessible === false || isAccessible === null);
 
   return (
     <Card
       className={cn(
         "group transition-all duration-300 hover:shadow-md dark:hover:shadow-primary/10 relative",
-        isDisabled
-          ? "opacity-60 cursor-not-allowed bg-muted"
+        shouldShowWarning
+          ? "hover:border-yellow-500/50 cursor-pointer bg-muted/20"
           : "hover:border-primary/50 cursor-pointer"
       )}
     >
+      {shouldShowWarning && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/20 backdrop-blur-[1px] rounded-lg overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="flex flex-col items-center bg-background/90 px-4 py-3 rounded-md shadow-sm border border-yellow-500/30">
+            <WifiOff className="h-5 w-5 text-yellow-500 mb-2" />
+            <div className="text-center">
+              <p className="text-xs font-medium text-foreground mb-1">
+                内网链接检测不可访问
+              </p>
+              <p className="text-xs text-muted-foreground">
+                检测可能不准确，点击仍可尝试
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col h-full">
         <CardHeader className="flex flex-row items-center space-x-4 p-4">
-          <div className="flex-shrink-0 w-10 h-10 overflow-hidden rounded-md bg-background flex items-center justify-center border shadow-sm group-hover:border-primary/50 group-hover:shadow-md transition-all duration-300">
+          <div
+            className={cn(
+              "flex-shrink-0 w-10 h-10 overflow-hidden rounded-md bg-background flex items-center justify-center border shadow-sm group-hover:border-primary/50 group-hover:shadow-md transition-all duration-300",
+              shouldShowWarning &&
+                "border-yellow-500/30 group-hover:border-yellow-500/50"
+            )}
+          >
             {iconBase64 && !iconError ? (
               <div className="flex items-center justify-center w-full h-full">
                 <Image
@@ -207,7 +229,10 @@ export function LinkCard({
                   alt={`${link.title} icon`}
                   width={32}
                   height={32}
-                  className="object-contain max-w-[32px] max-h-[32px] group-hover:scale-110 transition-transform duration-300"
+                  className={cn(
+                    "object-contain max-w-[32px] max-h-[32px] group-hover:scale-110 transition-transform duration-300",
+                    shouldShowWarning && "opacity-80"
+                  )}
                   onError={() => {
                     setIconError(true);
                   }}
@@ -231,7 +256,7 @@ export function LinkCard({
               <span>{link.title}</span>
 
               <div className="flex items-center gap-1 ml-2">
-                {/* 只在启用时显示网络状态图标 */}
+                {/* 显示内网链接状态图标 */}
                 {link.isInternalOnly && (
                   <TooltipProvider>
                     <Tooltip>
@@ -244,7 +269,7 @@ export function LinkCard({
                               <Lock className="h-4 w-4" />
                             </span>
                           ) : (
-                            <span className="text-red-500">
+                            <span className="text-yellow-500 animate-pulse">
                               <WifiOff className="h-4 w-4" />
                             </span>
                           )}
@@ -255,7 +280,7 @@ export function LinkCard({
                           ? "正在检测链接可访问性..."
                           : isAccessible
                           ? "内网链接可访问"
-                          : "内网链接不可访问"}
+                          : "内网链接检测不可访问，可尝试点击"}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -368,17 +393,15 @@ export function LinkCard({
         </CardFooter>
       </div>
 
-      {!isDisabled && (
-        <Link
-          href={effectiveUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute inset-0 z-0"
-          {...ariaDisabled}
-        >
-          <span className="sr-only">访问 {link.title}</span>
-        </Link>
-      )}
+      {/* 移除条件判断，始终允许点击 */}
+      <Link
+        href={effectiveUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute inset-0 z-0"
+      >
+        <span className="sr-only">访问 {link.title}</span>
+      </Link>
     </Card>
   );
 }

@@ -1,13 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/lib/types";
 
-// 定义Promise化的参数类型
-type RouteParams = Promise<{ id: string }>;
-
-export async function DELETE(request: Request, props: { params: RouteParams }) {
+// Next.js 15的路由处理函数参数格式
+export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -19,7 +17,15 @@ export async function DELETE(request: Request, props: { params: RouteParams }) {
       );
     }
 
-    const { id } = await props.params;
+    // 从URL路径中获取ID
+    const id = request.nextUrl.pathname.split("/").pop();
+
+    if (!id) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "缺少链接ID" },
+        { status: 400 }
+      );
+    }
 
     // 先删除链接与标签的关联
     await prisma.link.update({
@@ -49,7 +55,7 @@ export async function DELETE(request: Request, props: { params: RouteParams }) {
   }
 }
 
-export async function PUT(request: Request, props: { params: RouteParams }) {
+export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -61,7 +67,16 @@ export async function PUT(request: Request, props: { params: RouteParams }) {
       );
     }
 
-    const { id } = await props.params;
+    // 从URL路径中获取ID
+    const id = request.nextUrl.pathname.split("/").pop();
+
+    if (!id) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "缺少链接ID" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const {
       title,
@@ -103,23 +118,30 @@ export async function PUT(request: Request, props: { params: RouteParams }) {
       );
     }
 
+    // 构建更新数据
+    const updateData: any = {
+      title,
+      url: url || "", // 如果没有提供内网URL，使用空字符串
+      description,
+      icon,
+      isInternalOnly: Boolean(isInternalOnly),
+      isPublic: Boolean(isPublic),
+      categoryId,
+      tags: {
+        set: [], // 先清空所有标签关联
+        connect: tagIds?.length ? tagIds.map((id: string) => ({ id })) : [],
+      },
+    };
+
+    // 只有当externalUrl有值时才更新它
+    if (externalUrl !== undefined) {
+      updateData.externalUrl = externalUrl || null;
+    }
+
     // 更新链接
     const link = await prisma.link.update({
       where: { id },
-      data: {
-        title,
-        url: url || "", // 如果没有提供内网URL，使用空字符串
-        externalUrl,
-        description,
-        icon,
-        isInternalOnly: Boolean(isInternalOnly),
-        isPublic: Boolean(isPublic),
-        categoryId,
-        tags: {
-          set: [], // 先清空所有标签关联
-          connect: tagIds?.length ? tagIds.map((id: string) => ({ id })) : [],
-        },
-      },
+      data: updateData,
     });
 
     return NextResponse.json<ApiResponse<{ id: string }>>(

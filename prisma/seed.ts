@@ -26,16 +26,19 @@ async function main() {
 
   // 创建一些初始分类
   const categories = [
-    { name: "个人网站", description: "我的个人网站集合" },
-    { name: "家庭网络", description: "家庭局域网站点" },
-    { name: "工具", description: "常用工具站点" },
-    { name: "资源", description: "资源网站" },
+    { name: "个人网站", description: "我的个人网站集合", color: "#3b82f6" },
+    { name: "家庭网络", description: "家庭局域网站点", color: "#8b5cf6" },
+    { name: "工具", description: "常用工具站点", color: "#22c55e" },
+    { name: "资源", description: "资源网站", color: "#f59e0b" },
   ];
 
   for (const category of categories) {
     await prisma.category.upsert({
       where: { name: category.name },
-      update: { description: category.description },
+      update: {
+        description: category.description,
+        color: category.color,
+      },
       create: category,
     });
   }

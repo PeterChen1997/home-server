@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LinkManagement } from "@/components/admin/LinkManagement";
+import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import type {
   LinkWithRelations,
   CategoryWithLinks,
@@ -64,6 +65,7 @@ export default async function AdminPage() {
 
       <div className="space-y-8">
         <LinkManagement links={links} categories={categories} tags={tags} />
+        <CategoryManagement categories={categories} />
       </div>
     </div>
   );

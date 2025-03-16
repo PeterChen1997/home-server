@@ -5,7 +5,8 @@ import type { LinkWithRelations } from "@/lib/types";
 import { isInternalUrl } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ScrollButton from "@/components/ScrollButton";
+import ScrollButton from "../components/ScrollButton";
+import { CoolCard } from "@/components/CoolCard";
 
 async function getLinks(): Promise<LinkWithRelations[]> {
   const links = await prisma.link.findMany({
@@ -75,33 +76,67 @@ export default async function Home() {
 
   return (
     <div className="space-y-10 pb-8">
-      {/* 酷炫Hero Section */}
-      <section className="w-full py-12 md:py-20 lg:py-32 border-b relative overflow-hidden bg-gradient-to-br from-background to-background/80 dark:from-background dark:to-background/90">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] dark:opacity-[0.05]"></div>
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/20 blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary/20 blur-3xl"></div>
+      {/* 更酷炫的Hero Section */}
+      <section className="w-full py-16 md:py-24 lg:py-32 border-b relative overflow-hidden">
+        {/* 动态背景效果 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background/95 to-background/90"></div>
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.04] dark:opacity-[0.07]"></div>
+
+        {/* 光晕效果 */}
+        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl animate-pulse"></div>
+        <div
+          className="absolute top-1/2 left-1/3 h-[300px] w-[300px] rounded-full bg-blue-500/10 blur-3xl animate-pulse"
+          style={{ animationDelay: "1s", animationDuration: "7s" }}
+        ></div>
+        <div
+          className="absolute -bottom-20 -left-20 h-[400px] w-[400px] rounded-full bg-primary/10 blur-3xl animate-pulse"
+          style={{ animationDelay: "2s", animationDuration: "8s" }}
+        ></div>
+
+        {/* 漂浮元素 */}
+        <div
+          className="absolute top-20 right-[10%] w-12 h-12 rounded-full border border-primary/20 animate-float"
+          style={{ animationDelay: "0s" }}
+        ></div>
+        <div
+          className="absolute bottom-32 left-[15%] w-8 h-8 rounded-lg border border-primary/20 animate-float"
+          style={{ animationDelay: "1.5s" }}
+        ></div>
+        <div
+          className="absolute top-1/2 right-[30%] w-16 h-16 rounded-md border border-primary/20 animate-float rotate-45"
+          style={{ animationDelay: "1s" }}
+        ></div>
 
         <div className="container px-4 md:px-6 relative z-10">
-          <div className="flex flex-col items-center justify-center space-y-6 text-center">
-            <div className="inline-block rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground mb-2">
+          <div className="flex flex-col items-center justify-center space-y-8 text-center">
+            <div
+              className="inline-block rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground mb-2 animate-fade-in-up"
+              style={{ animationDelay: "0.2s" }}
+            >
               个人导航 · 随时访问
             </div>
-            <div className="space-y-3 max-w-3xl mx-auto">
-              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">
+            <div
+              className="space-y-4 max-w-3xl mx-auto animate-fade-in-up"
+              style={{ animationDelay: "0.4s" }}
+            >
+              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl xl:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70">
                 探索我的数字世界
               </h1>
               <p className="mx-auto max-w-[700px] text-muted-foreground text-lg md:text-xl">
                 这里收集了我日常使用的所有重要网站和工具，让导航变得简单而高效。
               </p>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
-              <ScrollButton targetId="content">
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button className="group flex items-center gap-2 transition-all duration-300 hover:gap-3">
                 开始探索{" "}
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </ScrollButton>
-              <Button variant="outline" size="lg">
-                了解更多
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
+              <ScrollButton
+                targetId="links-section"
+                className="bg-white/10 text-white hover:bg-white/20"
+              >
+                查看导航
+              </ScrollButton>
             </div>
           </div>
         </div>
@@ -116,7 +151,7 @@ export default async function Home() {
         }
       >
         <div
-          id="content-section"
+          id="links-section"
           className="container px-4 md:px-6 space-y-10 scroll-mt-20"
         >
           {/* 按分类显示链接 */}
@@ -131,11 +166,17 @@ export default async function Home() {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {categoryLinks.map((link) => (
-                    <LinkCard
+                    <CoolCard
                       key={link.id}
-                      link={link}
-                      showCategory={false}
-                      iconBase64={link.iconBase64}
+                      title={link.title}
+                      description={link.description || undefined}
+                      icon={link.iconBase64 || undefined}
+                      link={link.url || link.externalUrl || "#"}
+                      isExternal={!link.isInternalOnly}
+                      tags={link.tags.map((tag) => tag.name)}
+                      color={
+                        link.tags[0]?.color || link.category?.color || "#7c3aed"
+                      }
                     />
                   ))}
                 </div>
@@ -152,10 +193,17 @@ export default async function Home() {
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {uncategorizedLinks.map((link) => (
-                  <LinkCard
+                  <CoolCard
                     key={link.id}
-                    link={link}
-                    iconBase64={link.iconBase64}
+                    title={link.title}
+                    description={link.description || undefined}
+                    icon={link.iconBase64 || undefined}
+                    link={link.url || link.externalUrl || "#"}
+                    isExternal={!link.isInternalOnly}
+                    tags={link.tags.map((tag) => tag.name)}
+                    color={
+                      link.tags[0]?.color || link.category?.color || "#7c3aed"
+                    }
                   />
                 ))}
               </div>

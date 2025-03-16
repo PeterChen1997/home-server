@@ -21,6 +21,7 @@ export interface LinkWithRelations {
     id: string;
     name: string;
     description?: string | null;
+    color?: string | null;
   } | null;
   tags: {
     id: string;
