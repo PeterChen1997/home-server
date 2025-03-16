@@ -3,6 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { isInternalUrl } from "@/lib/utils";
+import {
+  fetchIconOnClient,
+  saveIconToServer,
+  saveLocalIconToServer,
+} from "@/lib/client-utils";
 import type {
   LinkWithRelations,
   CategoryWithLinks,
@@ -115,6 +120,10 @@ export function LinkForm({
     setIsSubmitting(true);
 
     try {
+      // 如果没有设置自定义图标，尝试在客户端获取图标
+      let iconBase64: string | null = formData.icon;
+
+      // 创建/更新链接
       const endpoint = isEditing ? `/api/links/${link?.id}` : "/api/links";
       const method = isEditing ? "PUT" : "POST";
 
@@ -126,12 +135,48 @@ export function LinkForm({
         body: JSON.stringify({
           ...formData,
           description: formData.description || null,
-          icon: formData.icon || null,
+          icon: iconBase64 || null,
           categoryId: formData.categoryId || null,
         }),
       });
 
       if (response.ok) {
+        const data = await response.json();
+        const linkId = data.data?.id;
+
+        // 如果没有自定义图标，但创建/更新成功了链接
+        if (!iconBase64 && linkId) {
+          // 确定要使用的URL
+          const url = formData.url || formData.externalUrl;
+
+          if (url) {
+            try {
+              // 客户端尝试获取图标
+              iconBase64 = await fetchIconOnClient(url);
+
+              if (iconBase64) {
+                console.log("客户端成功获取图标");
+
+                // 检查是否是内网URL
+                if (isInternalUrl(url)) {
+                  // 对于内网URL，使用专门的API保存
+                  await saveLocalIconToServer(linkId, iconBase64);
+                } else {
+                  // 对于外网URL，使用通用API保存
+                  await saveIconToServer(linkId, iconBase64, url);
+                }
+              }
+            } catch (iconError) {
+              console.log("客户端获取图标失败，尝试其他方法", iconError);
+
+              // 对于外网URL，可以尝试服务端获取
+              if (!isInternalUrl(url)) {
+                await saveIconToServer(linkId, null, url);
+              }
+            }
+          }
+        }
+
         router.push("/admin");
         router.refresh();
       } else {

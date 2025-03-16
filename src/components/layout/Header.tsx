@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 export function Header() {
   const { setTheme, theme } = useTheme();
@@ -45,7 +45,27 @@ export function Header() {
 }
 
 function ThemeToggle() {
-  const { setTheme, theme } = useTheme();
+  const { setTheme, theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // 组件挂载后再渲染主题切换UI
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // 如果未挂载，返回空占位符，保持布局稳定
+  if (!mounted) {
+    return (
+      <div className="flex items-center space-x-1 rounded-md border">
+        <div className="h-8 w-8"></div>
+        <div className="h-8 w-8"></div>
+        <div className="h-8 w-8"></div>
+      </div>
+    );
+  }
+
+  // 确定哪个按钮应该高亮
+  const activeTheme = theme === "system" ? resolvedTheme : theme;
 
   return (
     <div className="flex items-center space-x-1 rounded-md border">
@@ -54,7 +74,7 @@ function ThemeToggle() {
         size="icon"
         className={cn(
           "h-8 w-8 px-0",
-          theme === "light" && "bg-accent text-accent-foreground"
+          activeTheme === "light" && "bg-accent text-accent-foreground"
         )}
         onClick={() => setTheme("light")}
         aria-label="切换至亮色主题"
@@ -67,7 +87,7 @@ function ThemeToggle() {
         size="icon"
         className={cn(
           "h-8 w-8 px-0",
-          theme === "dark" && "bg-accent text-accent-foreground"
+          activeTheme === "dark" && "bg-accent text-accent-foreground"
         )}
         onClick={() => setTheme("dark")}
         aria-label="切换至暗色主题"
