@@ -9,11 +9,12 @@ import type {
   TagWithLinks,
 } from "@/lib/types";
 
-interface EditLinkPageProps {
-  params: {
-    id: string;
-  };
-}
+// 更新为Next.js 15兼容的类型定义
+type Params = Promise<{ id: string }>;
+
+type Props = {
+  params: Params;
+};
 
 async function getData(id: string) {
   const link = await prisma.link.findUnique({
@@ -53,7 +54,7 @@ async function getData(id: string) {
   };
 }
 
-export default async function EditLinkPage({ params }: EditLinkPageProps) {
+export default async function EditLinkPage(props: Props) {
   const session = await getServerSession(authOptions);
 
   // 检查用户是否已登录且是管理员
@@ -61,7 +62,9 @@ export default async function EditLinkPage({ params }: EditLinkPageProps) {
     redirect("/login");
   }
 
-  const data = await getData(params.id);
+  // 使用await获取params的值
+  const { id } = await props.params;
+  const data = await getData(id);
 
   if (!data) {
     notFound();

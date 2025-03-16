@@ -105,7 +105,12 @@ export function LinkManagement({
                 <th className="px-4 py-3 text-left text-sm font-medium">
                   标题
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">URL</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  内网URL
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  外网URL
+                </th>
                 <th className="px-4 py-3 text-left text-sm font-medium">
                   分类
                 </th>
@@ -164,15 +169,34 @@ export function LinkManagement({
                     </div>
                   </td>
                   <td className="max-w-[200px] truncate px-4 py-3 text-sm text-muted-foreground">
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center hover:underline"
-                    >
-                      {link.url}
-                      <ExternalLink className="ml-1 h-3 w-3" />
-                    </a>
+                    {link.url ? (
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center hover:underline"
+                      >
+                        {link.url}
+                        <ExternalLink className="ml-1 h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </td>
+                  <td className="max-w-[200px] truncate px-4 py-3 text-sm text-muted-foreground">
+                    {link.externalUrl ? (
+                      <a
+                        href={link.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center hover:underline"
+                      >
+                        {link.externalUrl}
+                        <ExternalLink className="ml-1 h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {link.category?.name || "-"}
@@ -235,7 +259,7 @@ export function LinkManagement({
               {links.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-8 text-center text-muted-foreground"
                   >
                     暂无链接，点击"添加链接"按钮创建

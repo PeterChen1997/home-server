@@ -4,10 +4,10 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/lib/types";
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// 定义Promise化的参数类型
+type RouteParams = Promise<{ id: string }>;
+
+export async function DELETE(request: Request, props: { params: RouteParams }) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -19,7 +19,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await props.params;
 
     // 先删除链接与标签的关联
     await prisma.link.update({
@@ -49,10 +49,7 @@ export async function DELETE(
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, props: { params: RouteParams }) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -64,7 +61,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await props.params;
     const body = await request.json();
     const {
       title,
