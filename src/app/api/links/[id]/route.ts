@@ -69,6 +69,7 @@ export async function PUT(
     const {
       title,
       url,
+      externalUrl,
       description,
       icon,
       isInternalOnly,
@@ -78,9 +79,17 @@ export async function PUT(
     } = body;
 
     // 验证必填字段
-    if (!title || !url) {
+    if (!title) {
       return NextResponse.json<ApiResponse<null>>(
-        { success: false, error: "标题和URL是必填项" },
+        { success: false, error: "标题是必填项" },
+        { status: 400 }
+      );
+    }
+
+    // 验证至少提供了一个URL
+    if (!url && !externalUrl) {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "内网URL和外网URL至少需要提供一个" },
         { status: 400 }
       );
     }
@@ -102,7 +111,8 @@ export async function PUT(
       where: { id },
       data: {
         title,
-        url,
+        url: url || "", // 如果没有提供内网URL，使用空字符串
+        externalUrl,
         description,
         icon,
         isInternalOnly: Boolean(isInternalOnly),

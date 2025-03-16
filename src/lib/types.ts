@@ -9,6 +9,7 @@ export interface LinkWithRelations {
   id: string;
   title: string;
   url: string;
+  externalUrl?: string | null;
   description?: string | null;
   icon?: string | null;
   isInternalOnly: boolean;

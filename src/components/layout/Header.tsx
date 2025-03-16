@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { SunIcon, MoonIcon, Laptop2Icon, HomeIcon } from "lucide-react";
+import {
+  SunIcon,
+  MoonIcon,
+  Laptop2Icon,
+  HomeIcon,
+  Settings2Icon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import React from "react";
@@ -24,6 +30,13 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/admin"
+            className="flex items-center gap-1 px-2 py-1 rounded-md font-medium text-sm transition-colors hover:text-primary hover:bg-accent"
+          >
+            <Settings2Icon className="h-4 w-4" />
+            <span className="hidden sm:inline-flex">管理</span>
+          </Link>
           <ThemeToggle />
         </div>
       </div>

@@ -27,29 +27,39 @@ export function formatDate(date: Date | string): string {
  */
 export const fetchBase64Icon = cache(async (url: string): Promise<string> => {
   try {
-    // 1. 尝试从URL获取图标
-    const response = await fetch(url, {
-      next: { revalidate: 86400 }, // 缓存一天
-      // 添加超时处理
-      signal: AbortSignal.timeout(3000), // 3秒超时
-    });
+    // 1. 首先尝试正常模式获取图标
+    try {
+      const response = await fetch(url, {
+        next: { revalidate: 86400 }, // 缓存一天
+        // 添加超时处理
+        signal: AbortSignal.timeout(2000), // 2秒超时
+      });
 
-    if (!response.ok) {
-      console.log(`Icon fetch failed for ${url}: ${response.status}`);
-      return "/placeholder-icon.svg";
+      if (response.ok) {
+        // 2. 将响应转换为ArrayBuffer
+        const buffer = await response.arrayBuffer();
+        // 3. 将ArrayBuffer转换为Base64字符串
+        const base64 = Buffer.from(buffer).toString("base64");
+        // 4. 确定MIME类型
+        let contentType = response.headers.get("content-type") || "image/png";
+        // 5. 返回适合于<img>标签的src值
+        return `data:${contentType};base64,${base64}`;
+      }
+      // 如果常规请求失败，继续尝试no-cors模式
+    } catch (error) {
+      // 常规请求失败，继续尝试no-cors模式
+      console.log(`Normal fetch failed for ${url}, trying no-cors mode`);
     }
 
-    // 2. 将响应转换为ArrayBuffer
-    const buffer = await response.arrayBuffer();
+    // 使用客户端的Image元素作为后备方案（针对浏览器环境）
+    if (typeof window !== "undefined") {
+      // 直接返回原始URL，让浏览器尝试加载
+      // 这在客户端代码中更有效，特别是对于可能有CORS限制的图标
+      return url;
+    }
 
-    // 3. 将ArrayBuffer转换为Base64字符串
-    const base64 = Buffer.from(buffer).toString("base64");
-
-    // 4. 确定MIME类型
-    let contentType = response.headers.get("content-type") || "image/png";
-
-    // 5. 返回适合于<img>标签的src值
-    return `data:${contentType};base64,${base64}`;
+    // 服务器端默认返回占位图标
+    return "/placeholder-icon.svg";
   } catch (error) {
     // 简化错误日志，避免大量错误输出
     console.log(`Error loading icon: ${url}`);
@@ -70,10 +80,26 @@ export async function getLinkIcon(link: {
 
   try {
     const url = new URL(link.url);
+
+    // 检查是否为内部网络IP地址
+    if (isInternalUrl(url.toString())) {
+      // 对于内部网络链接，使用通用的图标
+      return "/icons/network-icon.svg";
+    }
+
+    // 对于普通网站使用Google的favicon服务
     const iconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
 
-    // 返回Base64编码的图标
-    return await fetchBase64Icon(iconUrl);
+    // 尝试使用no-cors模式获取图标
+    try {
+      return await fetchBase64Icon(iconUrl);
+    } catch (fetchError) {
+      // 如果无法获取，则使用本地图标
+      console.log(
+        `Failed to fetch icon with regular fetch, using placeholder: ${fetchError}`
+      );
+      return "/placeholder-icon.svg";
+    }
   } catch (e) {
     return "/placeholder-icon.svg";
   }

@@ -18,6 +18,7 @@ model Link {
   id              String    @id @default(cuid())
   title           String
   url             String
+  externalUrl     String?   // URL for external access
   description     String?
   icon            String?
   isInternalOnly  Boolean   @default(false)

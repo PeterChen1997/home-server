@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Edit, Trash2, Plus, ExternalLink } from "lucide-react";
-import { getLinkIcon } from "@/lib/utils";
+import { getLinkIcon, isInternalUrl } from "@/lib/utils";
+import Image from "next/image";
 import type {
   LinkWithRelations,
   CategoryWithLinks,
@@ -25,6 +26,31 @@ export function LinkManagement({
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedLink, setSelectedLink] = useState<string | null>(null);
+  const [loadedIcons, setLoadedIcons] = useState<Record<string, boolean>>({});
+  const [iconUrls, setIconUrls] = useState<Record<string, string>>({});
+
+  // Load icon URLs when component mounts
+  useEffect(() => {
+    const loadIcons = async () => {
+      const urls: Record<string, string> = {};
+
+      for (const link of links) {
+        if (isInternalUrl(link.url)) {
+          urls[link.id] = "/icons/network-icon.svg";
+        } else {
+          try {
+            urls[link.id] = await getLinkIcon(link);
+          } catch (error) {
+            urls[link.id] = "/placeholder-icon.svg";
+          }
+        }
+      }
+
+      setIconUrls(urls);
+    };
+
+    loadIcons();
+  }, [links]);
 
   const handleDelete = async (id: string) => {
     if (isDeleting) return;
@@ -49,6 +75,13 @@ export function LinkManagement({
       setIsDeleting(false);
       setSelectedLink(null);
     }
+  };
+
+  const handleIconError = (linkId: string) => {
+    setLoadedIcons((prev) => ({
+      ...prev,
+      [linkId]: false,
+    }));
   };
 
   return (
@@ -92,12 +125,40 @@ export function LinkManagement({
                 <tr key={link.id} className="border-b">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 overflow-hidden rounded-md border">
-                        <img
-                          src={getLinkIcon(link)}
-                          alt={link.title}
-                          className="h-full w-full object-contain"
-                        />
+                      <div className="h-8 w-8 overflow-hidden rounded-md border flex items-center justify-center bg-background">
+                        {loadedIcons[link.id] === false ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-muted-foreground"
+                          >
+                            <rect
+                              width="18"
+                              height="18"
+                              x="3"
+                              y="3"
+                              rx="2"
+                              ry="2"
+                            />
+                            <path d="M9 17v-2" />
+                            <path d="M12 17v-6" />
+                            <path d="M15 17v-4" />
+                          </svg>
+                        ) : (
+                          <img
+                            src={iconUrls[link.id] || "/placeholder-icon.svg"}
+                            alt={link.title}
+                            className="h-full w-full object-contain"
+                            onError={() => handleIconError(link.id)}
+                          />
+                        )}
                       </div>
                       <span className="font-medium">{link.title}</span>
                     </div>

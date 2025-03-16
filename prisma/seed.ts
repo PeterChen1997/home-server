@@ -49,6 +49,23 @@ async function main() {
     { name: "娱乐", color: "#f59e0b" },
     { name: "内网", color: "#8b5cf6" },
     { name: "公网", color: "#ec4899" },
+    { name: "开发", color: "#3b82f6" },
+    { name: "设计", color: "#f43f5e" },
+    { name: "文档", color: "#14b8a6" },
+    { name: "视频", color: "#ef4444" },
+    { name: "音乐", color: "#8b5cf6" },
+    { name: "工具", color: "#64748b" },
+    { name: "社交", color: "#06b6d4" },
+    { name: "购物", color: "#fb7185" },
+    { name: "金融", color: "#84cc16" },
+    { name: "资讯", color: "#f97316" },
+    { name: "云服务", color: "#6366f1" },
+    { name: "游戏", color: "#9333ea" },
+    { name: "生活", color: "#16a34a" },
+    { name: "办公", color: "#0284c7" },
+    { name: "博客", color: "#d946ef" },
+    { name: "摄影", color: "#db2777" },
+    { name: "AI", color: "#475569" },
   ];
 
   for (const tag of tags) {

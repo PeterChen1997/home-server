@@ -27,6 +27,7 @@ export function LinkForm({
   const [formData, setFormData] = useState({
     title: "",
     url: "",
+    externalUrl: "",
     description: "",
     icon: "",
     isInternalOnly: false,
@@ -41,6 +42,7 @@ export function LinkForm({
       setFormData({
         title: link.title,
         url: link.url,
+        externalUrl: link.externalUrl || "",
         description: link.description || "",
         icon: link.icon || "",
         isInternalOnly: link.isInternalOnly,
@@ -95,6 +97,12 @@ export function LinkForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    // 验证至少提供了一个URL
+    if (!formData.url && !formData.externalUrl) {
+      alert("请至少提供一个URL（内网或外网）");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -156,7 +164,7 @@ export function LinkForm({
             htmlFor="url"
             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            URL <span className="text-destructive">*</span>
+            内网 URL
           </label>
           <input
             id="url"
@@ -165,8 +173,30 @@ export function LinkForm({
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={formData.url}
             onChange={handleChange}
-            required
+            placeholder="例如: http://192.168.1.100:8080 或 http://nas.local"
           />
+          <p className="text-xs text-muted-foreground">内网或首选访问链接</p>
+        </div>
+
+        <div className="space-y-2">
+          <label
+            htmlFor="externalUrl"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            外网 URL
+          </label>
+          <input
+            id="externalUrl"
+            name="externalUrl"
+            type="url"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            value={formData.externalUrl}
+            onChange={handleChange}
+            placeholder="例如: https://example.com"
+          />
+          <p className="text-xs text-muted-foreground">
+            当不在本地网络时访问的链接（至少需要提供内网URL或外网URL之一）
+          </p>
         </div>
 
         <div className="space-y-2">
