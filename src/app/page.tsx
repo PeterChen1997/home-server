@@ -7,6 +7,18 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ScrollButton from "../components/ScrollButton";
 import { CoolCard } from "@/components/CoolCard";
+import { Metadata } from "next";
+
+// 设置页面缓存配置，revalidate=0 表示不缓存
+export const revalidate = 0;
+
+// 使用generateMetadata可以确保每次访问时都生成新的元数据
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "我的导航 | 首页 - " + new Date().toISOString(),
+    description: "个人导航页面，收集了日常使用的所有重要网站和工具",
+  };
+}
 
 async function getLinks(): Promise<LinkWithRelations[]> {
   const links = await prisma.link.findMany({
@@ -127,10 +139,6 @@ export default async function Home() {
               </p>
             </div>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button className="group flex items-center gap-2 transition-all duration-300 hover:gap-3">
-                开始探索{" "}
-                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </Button>
               <ScrollButton
                 targetId="links-section"
                 className="bg-white/10 text-white hover:bg-white/20"

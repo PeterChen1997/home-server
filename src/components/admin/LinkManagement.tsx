@@ -25,6 +25,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { fetchIconOnClient, saveLocalIconToServer } from "@/lib/client-utils";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import type {
   LinkWithRelations,
   CategoryWithLinks,
@@ -51,21 +53,35 @@ export function LinkManagement({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [refreshingIcon, setRefreshingIcon] = useState<string | null>(null);
 
-  // Load icon URLs when component mounts
+  // 创建默认的图标，基于链接的第一个字符 (与首页保持一致)
+  function getDefaultIcon(link: LinkWithRelations): string {
+    // 如果链接有自定义图标，优先使用
+    if (link.icon) {
+      return link.icon;
+    }
+
+    // 检查是否是内部链接
+    if (isInternalUrl(link.url)) {
+      return "/icons/network-icon.svg";
+    }
+
+    // 使用站点的第一个字符作为图标文本
+    const hostname = link.url ? new URL(link.url).hostname : "";
+    const firstChar = (hostname[0] || link.title[0] || "A").toUpperCase();
+
+    // 返回默认图标的路径
+    return `/api/default-icon?char=${firstChar}&name=${encodeURIComponent(
+      link.title
+    )}`;
+  }
+
   useEffect(() => {
     const loadIcons = async () => {
       const urls: Record<string, string> = {};
 
       for (const link of links) {
-        if (isInternalUrl(link.url)) {
-          urls[link.id] = "/icons/network-icon.svg";
-        } else {
-          try {
-            urls[link.id] = await getLinkIcon(link);
-          } catch (error) {
-            urls[link.id] = "/placeholder-icon.svg";
-          }
-        }
+        // 使用与首页相同的图标生成逻辑
+        urls[link.id] = getDefaultIcon(link);
       }
 
       setIconUrls(urls);
@@ -99,11 +115,17 @@ export function LinkManagement({
     }
   };
 
+  // 处理图片加载成功
+  const handleImageLoad = (linkId: string) => {
+    setLoadedIcons((prev) => ({ ...prev, [linkId]: true }));
+  };
+
+  // 处理图片加载失败
   const handleIconError = (linkId: string) => {
-    setLoadedIcons((prev) => ({
-      ...prev,
-      [linkId]: false,
-    }));
+    console.error(`图标加载失败: ${linkId}`);
+    setLoadedIcons((prev) => ({ ...prev, [linkId]: false }));
+    // 使用占位符图标
+    setIconUrls((prev) => ({ ...prev, [linkId]: "/placeholder-icon.svg" }));
   };
 
   const confirmDelete = async () => {
@@ -162,6 +184,26 @@ export function LinkManagement({
     }
   };
 
+  // 刷新图标
+  const handleRefreshIcon = async (linkId: string) => {
+    setRefreshingIcon(linkId);
+    try {
+      const link = links.find((l) => l.id === linkId);
+      if (link) {
+        // 使用与首页相同的图标生成逻辑
+        const newIconUrl = getDefaultIcon(link);
+        setIconUrls((prev) => ({
+          ...prev,
+          [linkId]: newIconUrl,
+        }));
+      }
+    } catch (error) {
+      console.error("刷新图标失败:", error);
+    } finally {
+      setRefreshingIcon(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -192,7 +234,7 @@ export function LinkManagement({
               {links.map((link) => (
                 <TableRow key={link.id}>
                   <TableCell>
-                    <div className="w-10 h-10 relative rounded-md overflow-hidden border flex items-center justify-center bg-background">
+                    <div className="w-10 h-10 relative rounded-md overflow-hidden border flex items-center justify-center bg-background group">
                       {loadedIcons[link.id] === false ? (
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -222,10 +264,25 @@ export function LinkManagement({
                         <img
                           src={iconUrls[link.id] || "/placeholder-icon.svg"}
                           alt={link.title}
-                          className="h-full w-full object-contain"
+                          className="w-full h-full object-contain p-1"
+                          onLoad={() => handleImageLoad(link.id)}
                           onError={() => handleIconError(link.id)}
                         />
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-0 right-0 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 rounded-sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleRefreshIcon(link.id);
+                        }}
+                        disabled={refreshingIcon === link.id}
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span className="sr-only">刷新图标</span>
+                      </Button>
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">{link.title}</TableCell>
