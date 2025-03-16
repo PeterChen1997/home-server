@@ -199,7 +199,7 @@ export function LinkCard({
     >
       <div className="flex flex-col h-full">
         <CardHeader className="flex flex-row items-center space-x-4 p-4">
-          <div className="flex-shrink-0 w-10 h-10 overflow-hidden rounded-md bg-background flex items-center justify-center border shadow-sm">
+          <div className="flex-shrink-0 w-10 h-10 overflow-hidden rounded-md bg-background flex items-center justify-center border shadow-sm group-hover:border-primary/50 group-hover:shadow-md transition-all duration-300">
             {iconBase64 && !iconError ? (
               <div className="flex items-center justify-center w-full h-full">
                 <Image
@@ -207,7 +207,7 @@ export function LinkCard({
                   alt={`${link.title} icon`}
                   width={32}
                   height={32}
-                  className="object-contain max-w-[32px] max-h-[32px]"
+                  className="object-contain max-w-[32px] max-h-[32px] group-hover:scale-110 transition-transform duration-300"
                   onError={() => {
                     setIconError(true);
                   }}

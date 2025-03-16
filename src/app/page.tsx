@@ -5,6 +5,7 @@ import type { LinkWithRelations } from "@/lib/types";
 import { isInternalUrl } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ScrollButton from "@/components/ScrollButton";
 
 async function getLinks(): Promise<LinkWithRelations[]> {
   const links = await prisma.link.findMany({
@@ -94,10 +95,10 @@ export default async function Home() {
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
-              <Button className="gap-1 group" size="lg">
+              <ScrollButton targetId="content">
                 开始探索{" "}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              </ScrollButton>
               <Button variant="outline" size="lg">
                 了解更多
               </Button>
@@ -114,7 +115,10 @@ export default async function Home() {
           </div>
         }
       >
-        <div className="container px-4 md:px-6 space-y-10">
+        <div
+          id="content-section"
+          className="container px-4 md:px-6 space-y-10 scroll-mt-20"
+        >
           {/* 按分类显示链接 */}
           {Object.entries(linksByCategory).map(
             ([categoryName, categoryLinks]) => (
