@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import {
+  cn,
+  isInLocalNetwork,
+  isUrlAccessibleInLocalNetwork,
+} from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ExternalLink } from "lucide-react";
+import { ArrowUpRight, ExternalLink, WifiOff, Lock } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface CoolCardProps {
   title: string;
@@ -16,6 +26,7 @@ export interface CoolCardProps {
   className?: string;
   tags?: string[];
   color?: string;
+  isInternalOnly?: boolean; // 添加内部链接标记
 }
 
 export function CoolCard({
@@ -27,8 +38,32 @@ export function CoolCard({
   className,
   tags = [],
   color = "#7c3aed", // 默认紫色
+  isInternalOnly = false, // 默认非内部链接
 }: CoolCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isAccessible, setIsAccessible] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 检查内网链接可访问性
+  useEffect(() => {
+    // 如果链接是内部链接，检查可访问性
+    if (isInternalOnly) {
+      setIsLoading(true);
+      isUrlAccessibleInLocalNetwork(link)
+        .then((result) => {
+          setIsAccessible(result);
+        })
+        .catch(() => {
+          setIsAccessible(false);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      // 非内网链接总是可访问
+      setIsAccessible(true);
+    }
+  }, [link, isInternalOnly]);
 
   // 将颜色转换为RGB格式以便创建渐变
   const hexToRgb = (hex: string) => {
@@ -44,11 +79,18 @@ export function CoolCard({
 
   const rgb = hexToRgb(color);
 
+  // 计算链接状态
+  const shouldShowWarning =
+    isInternalOnly && (isAccessible === false || isAccessible === null);
+
   return (
     <motion.div
       className={cn(
         "group relative overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 hover:shadow-xl dark:hover:shadow-primary/10",
         isHovered ? "scale-[1.03]" : "scale-100",
+        shouldShowWarning
+          ? "hover:border-yellow-500/50"
+          : "hover:border-primary/50",
         className
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -57,6 +99,23 @@ export function CoolCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {/* 内网链接警告提示 */}
+      {shouldShowWarning && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/20 backdrop-blur-[1px] rounded-xl overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="flex flex-col items-center bg-background/90 px-4 py-3 rounded-md shadow-sm border border-yellow-500/30">
+            <WifiOff className="h-5 w-5 text-yellow-500 mb-2" />
+            <div className="text-center">
+              <p className="text-xs font-medium text-foreground mb-1">
+                内网链接检测不可访问
+              </p>
+              <p className="text-xs text-muted-foreground">
+                检测可能不准确，点击仍可尝试
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 背景渐变效果 */}
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500"
@@ -92,8 +151,51 @@ export function CoolCard({
               </div>
             ) : null}
 
-            {/* 标题 */}
-            <h3 className="text-xl font-semibold tracking-tight">{title}</h3>
+            {/* 标题和链接状态指示器 */}
+            <div className="flex flex-col">
+              <div className="flex items-center">
+                <h3 className="text-xl font-semibold tracking-tight">
+                  {title}
+                </h3>
+
+                {/* 显示内网链接状态图标 */}
+                {isInternalOnly && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-xs ml-2">
+                          {isLoading ? (
+                            <span className="animate-pulse">⋯</span>
+                          ) : isAccessible ? (
+                            <span className="text-green-500">
+                              <Lock className="h-4 w-4" />
+                            </span>
+                          ) : (
+                            <span className="text-yellow-500 animate-pulse">
+                              <WifiOff className="h-4 w-4" />
+                            </span>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {isLoading
+                          ? "正在检测链接可访问性..."
+                          : isAccessible
+                          ? "内网链接可访问"
+                          : "内网链接检测不可访问，可尝试点击"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+
+              {/* 描述 */}
+              {description && (
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                  {description}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* 外部链接图标 */}
@@ -112,13 +214,6 @@ export function CoolCard({
             )}
           </motion.div>
         </div>
-
-        {/* 描述 */}
-        {description && (
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-            {description}
-          </p>
-        )}
 
         {/* 标签 */}
         {tags.length > 0 && (

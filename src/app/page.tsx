@@ -181,6 +181,7 @@ export default async function Home() {
                       icon={link.iconBase64 || undefined}
                       link={link.url || link.externalUrl || "#"}
                       isExternal={!link.isInternalOnly}
+                      isInternalOnly={link.isInternalOnly}
                       tags={link.tags.map((tag) => tag.name)}
                       color={
                         link.tags[0]?.color || link.category?.color || "#7c3aed"
@@ -208,6 +209,7 @@ export default async function Home() {
                     icon={link.iconBase64 || undefined}
                     link={link.url || link.externalUrl || "#"}
                     isExternal={!link.isInternalOnly}
+                    isInternalOnly={link.isInternalOnly}
                     tags={link.tags.map((tag) => tag.name)}
                     color={
                       link.tags[0]?.color || link.category?.color || "#7c3aed"
