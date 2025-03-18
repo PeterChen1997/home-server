@@ -179,7 +179,8 @@ export default async function Home() {
                       title={link.title}
                       description={link.description || undefined}
                       icon={link.iconBase64 || undefined}
-                      link={link.url || link.externalUrl || "#"}
+                      link={link.url || ""}
+                      externalUrl={link.externalUrl || ""}
                       isExternal={!link.isInternalOnly}
                       isInternalOnly={link.isInternalOnly}
                       tags={link.tags.map((tag) => tag.name)}
@@ -207,7 +208,8 @@ export default async function Home() {
                     title={link.title}
                     description={link.description || undefined}
                     icon={link.iconBase64 || undefined}
-                    link={link.url || link.externalUrl || "#"}
+                    link={link.url || ""}
+                    externalUrl={link.externalUrl || ""}
                     isExternal={!link.isInternalOnly}
                     isInternalOnly={link.isInternalOnly}
                     tags={link.tags.map((tag) => tag.name)}

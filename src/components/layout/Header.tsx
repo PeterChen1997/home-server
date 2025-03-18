@@ -8,10 +8,22 @@ import {
   Laptop2Icon,
   HomeIcon,
   Settings2Icon,
+  Globe,
+  Network,
+  Wifi,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import React, { useEffect, useState } from "react";
+import { useNetwork } from "@/contexts/NetworkContext";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function Header() {
   const { setTheme, theme } = useTheme();
@@ -29,7 +41,8 @@ export function Header() {
           </Link>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <NetworkToggle />
           <Link
             href="/admin"
             className="flex items-center gap-1 px-2 py-1 rounded-md font-medium text-sm transition-colors hover:text-primary hover:bg-accent"
@@ -41,6 +54,47 @@ export function Header() {
         </div>
       </div>
     </header>
+  );
+}
+
+// 网络环境切换开关
+function NetworkToggle() {
+  const { useInternalNetwork, toggleNetworkMode } = useNetwork();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 px-2 py-1 rounded-md text-sm">
+            <span className="hidden sm:inline-flex font-medium text-muted-foreground">
+              {useInternalNetwork ? "内网" : "外网"}
+            </span>
+            <Switch
+              checked={useInternalNetwork}
+              onCheckedChange={toggleNetworkMode}
+              className="data-[state=checked]:bg-green-600"
+            />
+            {useInternalNetwork ? (
+              <Lock className="h-4 w-4 text-green-600" />
+            ) : (
+              <Globe className="h-4 w-4 text-blue-600" />
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>切换网络模式: {useInternalNetwork ? "内网" : "外网"}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

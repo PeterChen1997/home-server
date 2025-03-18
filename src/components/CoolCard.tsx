@@ -3,25 +3,23 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  cn,
-  isInLocalNetwork,
-  isUrlAccessibleInLocalNetwork,
-} from "@/lib/utils";
+import { cn, isUrlAccessibleInLocalNetwork } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ExternalLink, WifiOff, Lock } from "lucide-react";
+import { ArrowUpRight, ExternalLink, WifiOff, Lock, Globe } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useNetwork } from "@/contexts/NetworkContext";
 
 export interface CoolCardProps {
   title: string;
   description?: string;
   icon?: string | React.ReactNode;
   link: string;
+  externalUrl?: string; // 添加外网URL属性
   isExternal?: boolean;
   className?: string;
   tags?: string[];
@@ -34,6 +32,7 @@ export function CoolCard({
   description,
   icon,
   link,
+  externalUrl,
   isExternal = true,
   className,
   tags = [],
@@ -43,13 +42,35 @@ export function CoolCard({
   const [isHovered, setIsHovered] = useState(false);
   const [isAccessible, setIsAccessible] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { useInternalNetwork } = useNetwork();
+  const [effectiveUrl, setEffectiveUrl] = useState<string>(link);
+
+  // 根据网络环境和URL设置选择有效URL
+  useEffect(() => {
+    // 如果只有外部URL，使用外部URL
+    if (!link && externalUrl) {
+      setEffectiveUrl(externalUrl);
+    }
+    // 如果有外部URL且选择了外网模式
+    else if (externalUrl && !useInternalNetwork) {
+      setEffectiveUrl(externalUrl);
+    }
+    // 如果选择了内网模式或只有内部URL
+    else if (link) {
+      setEffectiveUrl(link);
+    }
+    // 如果两者都没有，使用空字符串
+    else {
+      setEffectiveUrl("");
+    }
+  }, [link, externalUrl, useInternalNetwork]);
 
   // 检查内网链接可访问性
   useEffect(() => {
     // 如果链接是内部链接，检查可访问性
     if (isInternalOnly) {
       setIsLoading(true);
-      isUrlAccessibleInLocalNetwork(link)
+      isUrlAccessibleInLocalNetwork(effectiveUrl)
         .then((result) => {
           setIsAccessible(result);
         })
@@ -63,7 +84,7 @@ export function CoolCard({
       // 非内网链接总是可访问
       setIsAccessible(true);
     }
-  }, [link, isInternalOnly]);
+  }, [effectiveUrl, isInternalOnly]);
 
   // 将颜色转换为RGB格式以便创建渐变
   const hexToRgb = (hex: string) => {
@@ -79,9 +100,17 @@ export function CoolCard({
 
   const rgb = hexToRgb(color);
 
+  // 同时有内外网URL
+  const hasBothUrls = link && externalUrl;
+
+  // 当外网模式下使用内网链接时
+  const isInternalOnlyWithExternalMode =
+    isInternalOnly && !useInternalNetwork && !externalUrl;
+
   // 计算链接状态
   const shouldShowWarning =
-    isInternalOnly && (isAccessible === false || isAccessible === null);
+    (isInternalOnly && (isAccessible === false || isAccessible === null)) ||
+    isInternalOnlyWithExternalMode;
 
   return (
     <motion.div
@@ -106,11 +135,11 @@ export function CoolCard({
             <WifiOff className="h-5 w-5 text-yellow-500 mb-2" />
             <div className="text-center">
               <p className="text-xs font-medium text-foreground mb-1">
-                内网链接检测不可访问
+                {isInternalOnlyWithExternalMode
+                  ? "仅内网可用"
+                  : "内网链接检测不可访问"}
               </p>
-              <p className="text-xs text-muted-foreground">
-                检测可能不准确，点击仍可尝试
-              </p>
+              <p className="text-xs text-muted-foreground">点击仍可尝试访问</p>
             </div>
           </div>
         </div>
@@ -187,6 +216,36 @@ export function CoolCard({
                     </Tooltip>
                   </TooltipProvider>
                 )}
+
+                {/* 显示当前网络模式 */}
+                {hasBothUrls && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-xs ml-2">
+                          <span
+                            className={
+                              useInternalNetwork
+                                ? "text-green-500"
+                                : "text-blue-500"
+                            }
+                          >
+                            {useInternalNetwork ? (
+                              <Lock className="h-4 w-4" />
+                            ) : (
+                              <Globe className="h-4 w-4" />
+                            )}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {useInternalNetwork
+                          ? "使用内网链接访问"
+                          : "使用外网链接访问"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
 
               {/* 描述 */}
@@ -232,7 +291,7 @@ export function CoolCard({
 
       {/* 链接覆盖整个卡片 */}
       <Link
-        href={link}
+        href={effectiveUrl}
         target={isExternal ? "_blank" : "_self"}
         rel={isExternal ? "noopener noreferrer" : ""}
         className="absolute inset-0 z-20"

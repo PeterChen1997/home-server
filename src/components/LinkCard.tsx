@@ -39,6 +39,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { useNetwork } from "@/contexts/NetworkContext";
 
 interface LinkCardProps {
   link: LinkWithRelations;
@@ -56,8 +57,8 @@ export function LinkCard({
   const [copied, setCopied] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [effectiveUrl, setEffectiveUrl] = useState<string>(link.url);
-  const [isInLocalNet, setIsInLocalNet] = useState(false);
   const [iconError, setIconError] = useState(false);
+  const { useInternalNetwork } = useNetwork();
 
   // 复制链接到剪贴板
   const copyToClipboard = () => {
@@ -81,27 +82,17 @@ export function LinkCard({
     }
   };
 
-  // 检查当前是否在本地网络中
-  useEffect(() => {
-    const checkLocalNetwork = async () => {
-      // 使用当前浏览器位置URL作为参考
-      const result = await isInLocalNetwork(window.location.href);
-      setIsInLocalNet(result);
-    };
-    checkLocalNetwork();
-  }, []);
-
-  // 根据当前网络环境选择URL
+  // 根据网络环境和URL设置选择有效URL
   useEffect(() => {
     // 如果只有外部URL，使用外部URL
     if (!link.url && link.externalUrl) {
       setEffectiveUrl(link.externalUrl);
     }
-    // 如果有外部URL且不在本地网络中，使用外部URL
-    else if (link.externalUrl && !isInLocalNet) {
+    // 如果有外部URL且选择了外网模式
+    else if (link.externalUrl && !useInternalNetwork) {
       setEffectiveUrl(link.externalUrl);
     }
-    // 如果只有内部URL，使用内部URL
+    // 如果选择了内网模式或只有内部URL
     else if (link.url) {
       setEffectiveUrl(link.url);
     }
@@ -109,7 +100,7 @@ export function LinkCard({
     else {
       setEffectiveUrl("");
     }
-  }, [link.url, link.externalUrl, isInLocalNet]);
+  }, [link.url, link.externalUrl, useInternalNetwork]);
 
   // 检查内网链接可访问性
   useEffect(() => {
@@ -184,9 +175,15 @@ export function LinkCard({
     iconError,
   ]);
 
-  // 计算链接状态 - 只用于显示警告，不再禁用链接
+  // 当外网模式下访问只有内网URL的链接时
+  const isInternalOnlyWithExternalMode =
+    link.isInternalOnly && !useInternalNetwork && !link.externalUrl;
+
+  // 应该显示警告的条件
   const shouldShowWarning =
-    link.isInternalOnly && (isAccessible === false || isAccessible === null);
+    (link.isInternalOnly &&
+      (isAccessible === false || isAccessible === null)) ||
+    isInternalOnlyWithExternalMode;
 
   return (
     <Card
@@ -203,11 +200,11 @@ export function LinkCard({
             <WifiOff className="h-5 w-5 text-yellow-500 mb-2" />
             <div className="text-center">
               <p className="text-xs font-medium text-foreground mb-1">
-                内网链接检测不可访问
+                {isInternalOnlyWithExternalMode
+                  ? "仅内网可用"
+                  : "内网链接检测不可访问"}
               </p>
-              <p className="text-xs text-muted-foreground">
-                检测可能不准确，点击仍可尝试
-              </p>
+              <p className="text-xs text-muted-foreground">点击仍可尝试访问</p>
             </div>
           </div>
         </div>
@@ -286,19 +283,31 @@ export function LinkCard({
                   </TooltipProvider>
                 )}
 
-                {/* 同时有内部和外部URL时显示双链标记 */}
-                {link.externalUrl && (
+                {/* 同时有内部和外部URL时显示当前使用的网络模式 */}
+                {link.url && link.externalUrl && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="text-xs">
-                          <span className="text-blue-500">
-                            <ArrowUpRightFromSquare className="h-4 w-4" />
+                          <span
+                            className={
+                              useInternalNetwork
+                                ? "text-green-500"
+                                : "text-blue-500"
+                            }
+                          >
+                            {useInternalNetwork ? (
+                              <Lock className="h-4 w-4" />
+                            ) : (
+                              <Globe className="h-4 w-4" />
+                            )}
                           </span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="top">
-                        {isInLocalNet ? "使用内网链接访问" : "使用外网链接访问"}
+                        {useInternalNetwork
+                          ? "使用内网链接访问"
+                          : "使用外网链接访问"}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
