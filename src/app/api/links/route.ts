@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/lib/types";
-import { revalidateTag } from "next/cache";
 
 export async function POST(request: Request) {
   try {
@@ -65,8 +64,16 @@ export async function POST(request: Request) {
       },
     });
 
-    // 重新验证标记为 'links' 的页面
-    await revalidateTag("links");
+    // 触发页面重新验证
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "links" }),
+      });
+    } catch (e) {
+      // 忽略 revalidate 错误
+    }
 
     return NextResponse.json<ApiResponse<{ id: string }>>(
       { success: true, data: { id: link.id } },

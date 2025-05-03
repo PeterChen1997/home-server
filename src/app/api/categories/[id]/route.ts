@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { revalidateTag } from "next/cache";
 
 // 获取特定分类
 export async function GET(
@@ -135,8 +134,16 @@ export async function DELETE(
       where: { id },
     });
 
-    // 重新验证标记为 'links' 的页面
-    await revalidateTag("links");
+    // 触发页面重新验证
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "links" }),
+      });
+    } catch (e) {
+      // 忽略 revalidate 错误
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
