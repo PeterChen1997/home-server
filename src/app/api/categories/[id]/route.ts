@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 // 获取特定分类
 export async function GET(
@@ -134,16 +135,8 @@ export async function DELETE(
       where: { id },
     });
 
-    // 触发页面重新验证
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: "links" }),
-      });
-    } catch (e) {
-      // 忽略 revalidate 错误
-    }
+    // 直接刷新首页
+    await revalidatePath("/");
 
     return NextResponse.json({ success: true });
   } catch (error) {

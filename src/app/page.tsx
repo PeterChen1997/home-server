@@ -9,11 +9,6 @@ import ScrollButton from "../components/ScrollButton";
 import { CoolCard } from "@/components/CoolCard";
 import { Metadata } from "next";
 
-// 设置页面缓存配置，使用 tag 标记，只在导航信息更新后重新生成
-export const revalidate = {
-  tags: ["links"],
-};
-
 // 使用generateMetadata可以确保每次访问时都生成新的元数据
 export async function generateMetadata(): Promise<Metadata> {
   return {

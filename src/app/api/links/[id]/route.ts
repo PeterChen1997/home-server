@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/lib/types";
+import { revalidatePath } from "next/cache";
 
 // Next.js 15的路由处理函数参数格式
 export async function DELETE(request: NextRequest) {
@@ -42,16 +43,8 @@ export async function DELETE(request: NextRequest) {
       where: { id },
     });
 
-    // 触发页面重新验证
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: "links" }),
-      });
-    } catch (e) {
-      // 忽略 revalidate 错误
-    }
+    // 直接刷新首页
+    await revalidatePath("/");
 
     return NextResponse.json<ApiResponse<null>>(
       { success: true },
@@ -155,16 +148,8 @@ export async function PUT(request: NextRequest) {
       data: updateData,
     });
 
-    // 触发页面重新验证
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: "links" }),
-      });
-    } catch (e) {
-      // 忽略 revalidate 错误
-    }
+    // 直接刷新首页
+    await revalidatePath("/");
 
     return NextResponse.json<ApiResponse<{ id: string }>>(
       { success: true, data: { id: link.id } },

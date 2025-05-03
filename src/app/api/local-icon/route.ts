@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isInternalUrl } from "@/lib/utils";
 import type { ApiResponse } from "@/lib/types";
+import { revalidatePath } from "next/cache";
 
 /**
  * 本地内网图标获取API
@@ -46,16 +47,8 @@ export async function POST(request: NextRequest) {
       data: { icon: iconBase64 },
     });
 
-    // 触发页面重新验证
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: "links" }),
-      });
-    } catch (e) {
-      // 忽略 revalidate 错误
-    }
+    // 直接刷新首页
+    await revalidatePath("/");
 
     return NextResponse.json<ApiResponse<{ success: true }>>(
       { success: true, data: { success: true } },

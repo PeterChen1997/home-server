@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { fetchBase64Icon, getLinkIcon, isInternalUrl } from "@/lib/utils";
 import type { ApiResponse, LinkWithRelations } from "@/lib/types";
+import { revalidatePath } from "next/cache";
 
 /**
  * 获取图标API
@@ -81,19 +82,8 @@ export async function POST(request: NextRequest) {
         data: { icon },
       });
 
-      // 触发页面重新验证
-      try {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tag: "links" }),
-          }
-        );
-      } catch (e) {
-        // 忽略 revalidate 错误
-      }
+      // 直接刷新首页
+      await revalidatePath("/");
 
       return NextResponse.json<ApiResponse<{ icon: string }>>(
         { success: true, data: { icon } },
@@ -169,19 +159,8 @@ export async function GET(request: NextRequest) {
               data: { icon },
             });
 
-            // 触发页面重新验证
-            try {
-              await fetch(
-                `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/revalidate`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ tag: "links" }),
-                }
-              );
-            } catch (e) {
-              // 忽略 revalidate 错误
-            }
+            // 直接刷新首页
+            await revalidatePath("/");
           }
         }
       } catch (error) {
