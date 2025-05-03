@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isInternalUrl } from "@/lib/utils";
 import type { ApiResponse } from "@/lib/types";
+import { revalidateTag } from "next/cache";
 
 /**
  * 本地内网图标获取API
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
       where: { id: linkId },
       data: { icon: iconBase64 },
     });
+
+    // 重新验证标记为 'links' 的页面
+    await revalidateTag("links");
 
     return NextResponse.json<ApiResponse<{ success: true }>>(
       { success: true, data: { success: true } },

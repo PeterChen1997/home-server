@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/lib/types";
+import { revalidateTag } from "next/cache";
 
 // Next.js 15的路由处理函数参数格式
 export async function DELETE(request: NextRequest) {
@@ -41,6 +42,9 @@ export async function DELETE(request: NextRequest) {
     await prisma.link.delete({
       where: { id },
     });
+
+    // 重新验证标记为 'links' 的页面
+    await revalidateTag("links");
 
     return NextResponse.json<ApiResponse<null>>(
       { success: true },
@@ -143,6 +147,9 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: updateData,
     });
+
+    // 重新验证标记为 'links' 的页面
+    await revalidateTag("links");
 
     return NextResponse.json<ApiResponse<{ id: string }>>(
       { success: true, data: { id: link.id } },

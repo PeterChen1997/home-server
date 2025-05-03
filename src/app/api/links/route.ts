@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import type { ApiResponse } from "@/lib/types";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: Request) {
   try {
@@ -63,6 +64,9 @@ export async function POST(request: Request) {
           : undefined,
       },
     });
+
+    // 重新验证标记为 'links' 的页面
+    await revalidateTag("links");
 
     return NextResponse.json<ApiResponse<{ id: string }>>(
       { success: true, data: { id: link.id } },

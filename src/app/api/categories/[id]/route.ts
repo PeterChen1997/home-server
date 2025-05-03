@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { revalidateTag } from "next/cache";
 
 // 获取特定分类
 export async function GET(
@@ -133,6 +134,9 @@ export async function DELETE(
     await prisma.category.delete({
       where: { id },
     });
+
+    // 重新验证标记为 'links' 的页面
+    await revalidateTag("links");
 
     return NextResponse.json({ success: true });
   } catch (error) {

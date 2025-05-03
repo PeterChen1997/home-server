@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { fetchBase64Icon, getLinkIcon, isInternalUrl } from "@/lib/utils";
 import type { ApiResponse, LinkWithRelations } from "@/lib/types";
+import { revalidateTag } from "next/cache";
 
 /**
  * 获取图标API
@@ -45,48 +46,59 @@ export async function POST(request: NextRequest) {
 
     let icon = null;
 
-    // 如果客户端已经获取了图标
-    if (iconBase64 && iconBase64.startsWith("data:")) {
+    // 如果客户端提供了图标，直接使用
+    if (iconBase64) {
       icon = iconBase64;
     }
-    // 否则尝试服务端获取图标
-    else if (url || link.url || link.externalUrl) {
+    // 如果客户端提供了URL，尝试服务端获取图标
+    else if (url) {
       try {
-        // 确定要使用的URL，优先级: 传入的URL > 外部URL > 内部URL
-        const urlToUse = url || link.externalUrl || link.url;
-
-        // 如果是内网URL，使用通用图标
-        if (isInternalUrl(urlToUse)) {
-          icon = "/icons/network-icon.svg";
-        } else {
-          // 否则使用我们优化后的获取图标方法
-          icon = await getLinkIcon({
-            url: urlToUse,
-            externalUrl: link.externalUrl,
-          });
-        }
+        icon = await fetchBase64Icon(url);
       } catch (error) {
-        console.error(`服务端获取图标失败: ${error}`);
-        icon = "/placeholder-icon.svg";
+        console.error(`获取图标失败: ${error}`);
+        icon = null;
+      }
+    }
+    // 尝试从链接自身的URL获取图标
+    else if (link.url || link.externalUrl) {
+      try {
+        // 优先使用外部URL（可公网访问）
+        const urlToUse = link.externalUrl || link.url;
+        // 使用优化后的获取图标方法
+        icon = await getLinkIcon({
+          url: urlToUse,
+          externalUrl: link.externalUrl,
+        });
+      } catch (error) {
+        console.error(`获取图标失败: ${error}`);
+        icon = null;
       }
     }
 
-    // 更新链接的图标
+    // 如果成功获取到图标，更新数据库
     if (icon) {
       await prisma.link.update({
         where: { id: linkId },
         data: { icon },
       });
-    }
 
-    return NextResponse.json<ApiResponse<{ icon: string | null }>>(
-      { success: true, data: { icon } },
-      { status: 200 }
-    );
+      // 重新验证标记为 'links' 的页面
+      await revalidateTag("links");
+
+      return NextResponse.json<ApiResponse<{ icon: string }>>(
+        { success: true, data: { icon } },
+        { status: 200 }
+      );
+    } else {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "无法获取图标" },
+        { status: 404 }
+      );
+    }
   } catch (error) {
-    console.error("处理图标时出错:", error);
+    console.error("获取图标时出错:", error);
     return NextResponse.json<ApiResponse<null>>(
-      { success: false, error: "处理图标失败" },
+      { success: false, error: "获取图标失败" },
       { status: 500 }
     );
   }
@@ -146,6 +158,9 @@ export async function GET(request: NextRequest) {
               where: { id: linkId },
               data: { icon },
             });
+
+            // 重新验证标记为 'links' 的页面
+            await revalidateTag("links");
           }
         }
       } catch (error) {
@@ -154,10 +169,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json<ApiResponse<{ icon: string | null }>>(
-      { success: true, data: { icon } },
-      { status: 200 }
-    );
+    // 返回获取到的图标或错误信息
+    if (icon) {
+      return NextResponse.json<ApiResponse<{ icon: string }>>(
+        { success: true, data: { icon } },
+        { status: 200 }
+      );
+    } else {
+      return NextResponse.json<ApiResponse<null>>(
+        { success: false, error: "无法获取图标" },
+        { status: 404 }
+      );
+    }
   } catch (error) {
     console.error("获取图标时出错:", error);
     return NextResponse.json<ApiResponse<null>>(
