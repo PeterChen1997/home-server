@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 // 设置缓存控制头
 export const revalidate = 3600; // 缓存1小时
 
