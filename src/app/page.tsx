@@ -162,7 +162,6 @@ export default async function Home() {
             id="links-section"
             className="container px-4 md:px-6 space-y-10 scroll-mt-20"
           >
-            <div>123</div>
             <FunctionCallArea />
             {/* 按分类显示链接 */}
             {Object.entries(linksByCategory).map(
